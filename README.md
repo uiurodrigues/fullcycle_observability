@@ -22,7 +22,7 @@ System made for finding the weather of an specific CEP.
             "cep":"00000000"
         }'
 
-## TRaces
+## Traces
 
 1. To access zipkins: [http://localhost:9411/zipkin/]
 2. To access jaeger: [http://localhost:16686/search]
