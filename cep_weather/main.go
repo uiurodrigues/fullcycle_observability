@@ -45,7 +45,6 @@ func main() {
 	}()
 
 	go func() {
-		weatherHandler := handler.NewHandler()
 
 		zipkinTracer, err := middleware.NewZipkinTracer()
 		if err != nil {
@@ -55,6 +54,8 @@ func main() {
 			zipkinTracer,
 			zipkinhttp.TransportTrace(true),
 		)
+
+		weatherHandler := handler.NewHandler(zipkinTracer)
 
 		r := mux.NewRouter()
 		r.HandleFunc("/weather/{cep}", weatherHandler.GetWeatherHandler).Methods(http.MethodGet)

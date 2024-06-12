@@ -3,6 +3,7 @@ package handler
 import (
 	"cep_weather/configs"
 	"cep_weather/dto"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/openzipkin/zipkin-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -23,12 +25,14 @@ var ErrCEPNotFound = fmt.Errorf("can not find zipcode")
 var ErrCEPInvalid = fmt.Errorf("invalid zipcode")
 
 type handler struct {
-	tracer trace.Tracer
+	tracer       trace.Tracer
+	zipkinTracer *zipkin.Tracer
 }
 
-func NewHandler() handler {
+func NewHandler(zipkinTracer *zipkin.Tracer) handler {
 	return handler{
-		tracer: otel.Tracer("cep-weather"),
+		tracer:       otel.Tracer("cep-weather"),
+		zipkinTracer: zipkinTracer,
 	}
 }
 
@@ -47,7 +51,7 @@ func (h *handler) GetWeatherHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	location, err := getLocationByCEP(cep)
+	location, err := h.getLocationByCEP(ctx, cep)
 	if errors.Is(err, ErrCEPNotFound) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -57,7 +61,7 @@ func (h *handler) GetWeatherHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	weather, err := getWeatherByLocation(location.Location)
+	weather, err := h.getWeatherByLocation(ctx, location.Location)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -82,7 +86,13 @@ func isCepValid(cep string) bool {
 	return true
 }
 
-func getLocationByCEP(cep string) (*dto.Location, error) {
+func (h *handler) getLocationByCEP(ctx context.Context, cep string) (*dto.Location, error) {
+	ctx, span := h.tracer.Start(ctx, "getCep")
+	defer span.End()
+
+	zipkinSpan, _ := h.zipkinTracer.StartSpanFromContext(ctx, "getCep")
+	defer zipkinSpan.Finish()
+
 	url := fmt.Sprintf("http://viacep.com.br/ws/%s/json/", cep)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -123,7 +133,13 @@ func getLocationByCEP(cep string) (*dto.Location, error) {
 	}
 }
 
-func getWeatherByLocation(location string) (*dto.Weather, error) {
+func (h *handler) getWeatherByLocation(ctx context.Context, location string) (*dto.Weather, error) {
+	ctx, span := h.tracer.Start(ctx, "getWeather")
+	defer span.End()
+
+	zipkinSpan, _ := h.zipkinTracer.StartSpanFromContext(ctx, "getWeather")
+	defer zipkinSpan.Finish()
+
 	location = strings.Replace(location, " ", "%20", -1) //threat space in location
 	reqUrl := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s", configs.GetConfig().WeatherAPIKey, url.PathEscape(location))
 

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/openzipkin/zipkin-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +19,7 @@ func TestSuccess(t *testing.T) {
 	}
 
 	r = mux.SetURLVars(r, vars)
-	h := NewHandler()
+	h := NewHandler(&zipkin.Tracer{})
 	h.GetWeatherHandler(w, r)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -34,7 +35,7 @@ func TestInvalidCEP(t *testing.T) {
 
 	r = mux.SetURLVars(r, vars)
 
-	h := NewHandler()
+	h := NewHandler(&zipkin.Tracer{})
 	h.GetWeatherHandler(w, r)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
@@ -50,7 +51,7 @@ func TestNoutFoundCEP(t *testing.T) {
 
 	r = mux.SetURLVars(r, vars)
 
-	h := NewHandler()
+	h := NewHandler(&zipkin.Tracer{})
 	h.GetWeatherHandler(w, r)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
