@@ -15,7 +15,7 @@ System made for finding the weather of an specific CEP.
 
 ## Usage
 
-1. Execute an Get request using the following curl:
+1. Execute a Get request using the following curl:
         curl --location 'http://localhost:8081' \
         --header 'Content-Type: application/json' \
         --data '{
